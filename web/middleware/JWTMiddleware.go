@@ -3,11 +3,11 @@ package middleware
 import (
 	"time"
 
+	"dormon.net/qq/config"
 	"dormon.net/qq/web/controller"
 
 	"github.com/appleboy/gin-jwt"
 	"github.com/gin-gonic/gin"
-	"dormon.net/qq/config"
 )
 
 // JWTMiddleware JWT中间件
@@ -20,7 +20,7 @@ func JWTMiddleware() *jwt.GinJWTMiddleware {
 		Authenticator: controller.Authenticator,
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
-				"dormon": "",
+				"dormon":  "",
 				"code":    code,
 				"message": message,
 			})

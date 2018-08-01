@@ -1,15 +1,17 @@
 package controller
 
 import (
-	"github.com/olivere/elastic"
-	"github.com/appleboy/gin-jwt"
-	"reflect"
-	"github.com/jinzhu/now"
-	"strconv"
-	"dormon.net/qq/es"
 	"net/http"
-	"github.com/sirupsen/logrus"
+	"reflect"
+	"strconv"
+
+	"dormon.net/qq/es"
+
+	"github.com/appleboy/gin-jwt"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/now"
+	"github.com/olivere/elastic"
+	"github.com/sirupsen/logrus"
 )
 
 // CommonParams 提取出共有的请求参数

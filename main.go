@@ -1,15 +1,15 @@
 package main
 
 import (
-	"os"
 	"fmt"
-	_ "net/http/pprof"
 	"net/http"
+	_ "net/http/pprof"
+	"os"
 
+	"dormon.net/qq/mht"
 	"dormon.net/qq/web"
 
 	"gopkg.in/urfave/cli.v1"
-	"dormon.net/qq/mht"
 )
 
 var AppVersion = "0.0.1-dev"

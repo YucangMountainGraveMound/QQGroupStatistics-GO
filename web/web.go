@@ -1,12 +1,12 @@
 package web
 
 import (
+	"dormon.net/qq/config"
+	"dormon.net/qq/db"
 	"dormon.net/qq/es"
 	"dormon.net/qq/web/model"
 
 	"gopkg.in/urfave/cli.v1"
-	"dormon.net/qq/db"
-	"dormon.net/qq/config"
 )
 
 var CMDRunWeb = cli.Command{
@@ -18,7 +18,6 @@ var CMDRunWeb = cli.Command{
 
 // RunWeb run to serve a web application
 func runWeb(c *cli.Context) {
-
 
 	config.InitialConfig(c)
 

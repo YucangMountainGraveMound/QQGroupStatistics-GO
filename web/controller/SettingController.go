@@ -1,12 +1,14 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"dormon.net/qq/web/model"
-	"net/http"
-	"github.com/jinzhu/gorm"
-	"strings"
 	"fmt"
+	"net/http"
+	"strings"
+
+	"dormon.net/qq/web/model"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 // SetDictionary 设置message terms查询时使用的字典

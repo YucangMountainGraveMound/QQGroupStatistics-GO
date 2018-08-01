@@ -1,14 +1,16 @@
 package mht
 
 import (
-	"io/ioutil"
-	"gopkg.in/urfave/cli.v1"
-	"os"
 	"bufio"
-	"dormon.net/qq/db"
+	"io/ioutil"
+	"os"
+
 	"dormon.net/qq/config"
+	"dormon.net/qq/db"
 	"dormon.net/qq/es"
 	"dormon.net/qq/web/model"
+
+	"gopkg.in/urfave/cli.v1"
 )
 
 var CMDRunImport = cli.Command{

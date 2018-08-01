@@ -1,15 +1,17 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/olivere/elastic"
-	"strconv"
-	"net/http"
 	"context"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"dormon.net/qq/errors"
 	"dormon.net/qq/web/model"
+
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"strings"
+	"github.com/olivere/elastic"
 )
 
 // WordFrequency 整体词频统计
@@ -26,7 +28,7 @@ import (
 	    }
 	}
 }
- */
+*/
 // TODO: 分词数量是否有优雅点的实现方法
 // TODO: 没搞明白英文分词数，还得研究一波
 func WordFrequency(c *gin.Context) {
@@ -43,7 +45,7 @@ func WordFrequency(c *gin.Context) {
 	// 语言类型
 	lang := c.DefaultQuery("lang", "zh")
 	if lang == "zh" {
-		for i := 0; i < wordNum; i ++ {
+		for i := 0; i < wordNum; i++ {
 			wordRegexp += "[\u4E00-\u9FA5]"
 		}
 	}
@@ -79,7 +81,7 @@ func WordFrequency(c *gin.Context) {
     	}
     }
 }
- */
+*/
 // MessageByTerms 根据Terms对message进行统计
 // @query key => Dictionaries表中相应的key字段
 // @query show => 是否返回hit内容 便于调试

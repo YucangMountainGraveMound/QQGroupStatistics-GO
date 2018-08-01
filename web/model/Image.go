@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
 	"dormon.net/qq/db"
+
+	"github.com/jinzhu/gorm"
 )
 
 type Image struct {

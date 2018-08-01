@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"dormon.net/qq/config"
+	"dormon.net/qq/db"
 	"dormon.net/qq/es"
+	"dormon.net/qq/utils"
+
 	"github.com/garyburd/redigo/redis"
 	"github.com/sirupsen/logrus"
-	"dormon.net/qq/db"
-	"dormon.net/qq/utils"
 )
 
 type Record struct {

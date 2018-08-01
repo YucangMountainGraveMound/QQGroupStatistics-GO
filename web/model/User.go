@@ -2,12 +2,12 @@ package model
 
 import (
 	"dormon.net/qq/config"
+	"dormon.net/qq/db"
 	"dormon.net/qq/utils"
 
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"dormon.net/qq/db"
 )
 
 type User struct {

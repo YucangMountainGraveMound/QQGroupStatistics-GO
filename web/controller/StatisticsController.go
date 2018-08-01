@@ -1,11 +1,13 @@
 package controller
 
 import (
-	"github.com/olivere/elastic"
-	"net/http"
-	"github.com/gin-gonic/gin"
 	"context"
+	"net/http"
+
 	"dormon.net/qq/config"
+
+	"github.com/gin-gonic/gin"
+	"github.com/olivere/elastic"
 )
 
 // Histogram 历史视图
@@ -22,7 +24,7 @@ import (
 	    }
 	}
 }
- */
+*/
 func Histogram(c *gin.Context) {
 	queryService := prepare(c)
 
@@ -54,7 +56,7 @@ func Histogram(c *gin.Context) {
 		}
 	}
 }
- */
+*/
 func MessageCountByUser(c *gin.Context) {
 	queryService := prepare(c)
 
@@ -92,15 +94,15 @@ func MessageCountByUser(c *gin.Context) {
 	    }
 	}
 }
- */
+*/
 func MessageCountBySpecificTime(c *gin.Context) {
 	queryService := prepare(c)
 
 	by := c.DefaultQuery("by", "hourOfDay")
 	of := c.DefaultQuery("of", "dayOfWeek")
 
-	subAggs := elastic.NewTermsAggregation().Script(elastic.NewScript("doc['date'].date." + by)).Order("_term", true).Size(100)
-	aggs := elastic.NewTermsAggregation().Script(elastic.NewScript("doc['date'].date." + of)).Order("_term", true)
+	subAggs := elastic.NewTermsAggregation().Script(elastic.NewScript("doc['date'].date."+by)).Order("_term", true).Size(100)
+	aggs := elastic.NewTermsAggregation().Script(elastic.NewScript("doc['date'].date."+of)).Order("_term", true)
 	aggs.SubAggregation("result", subAggs)
 
 	searchResult, err := queryService.Aggregation("result", aggs).Do(context.Background())
@@ -128,7 +130,7 @@ func MessageCountBySpecificTime(c *gin.Context) {
 		}
 	}
 }
- */
+*/
 func MessagesBySepcificTime(c *gin.Context) {
 
 }
@@ -155,7 +157,7 @@ func MessagesBySepcificTime(c *gin.Context) {
         }
     }
 }
- */
+*/
 func UsersByDay(c *gin.Context) {
 	queryService := prepare(c)
 
@@ -208,7 +210,7 @@ func UsersByDay(c *gin.Context) {
 		}
 	}
 }
- */
+*/
 func MessageHabit(c *gin.Context) {
 	queryService := prepare(c)
 
