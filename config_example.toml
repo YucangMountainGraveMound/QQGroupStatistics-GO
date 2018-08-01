@@ -1,0 +1,27 @@
+Secret = "some secret key"
+
+[ElasticSearchConfig]
+  Host = "localhost"
+  Port = "9200"
+  NumberOfShards = 5
+  NumberOfReplicas = 1
+  IndexName = "qq"
+
+[DatabaseConfig]
+  Host = "localhost"
+  Port = "5432"
+  DatabaseName = "qq"
+  Username = "dormon"
+  Password = "dormon"
+
+[RedisConfig]
+  Host = "localhost"
+  Port = "6379"
+
+[[Account]]
+  Account = "some qq number"
+  Alias = ["some qq alias"]
+
+[[Account]]
+  Account = "another qq number"
+  Alias = ["other qq alias"]
