@@ -10,6 +10,7 @@ import (
 	"dormon.net/qq/web"
 
 	"gopkg.in/urfave/cli.v1"
+	"dormon.net/qq/es"
 )
 
 var AppVersion = "0.0.1-dev"
@@ -29,6 +30,8 @@ func main() {
 		web.CMDRunWeb,
 		mht.CMDRunImport,
 		mht.CMDRunFix,
+		es.CMDRunReindex,
+		es.CMDRunCreate,
 	}
 
 	if err := app.Run(os.Args); err != nil {

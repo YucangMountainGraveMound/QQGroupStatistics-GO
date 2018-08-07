@@ -34,7 +34,7 @@ func runWeb(c *cli.Context) {
 
 	config.InitialConfig(c)
 
-	es.InitialES(c)
+	es.InitialES()
 
 	db.InitialDB()
 	autoMigrate()

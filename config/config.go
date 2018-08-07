@@ -26,7 +26,7 @@ type elasticSearchConfig struct {
 	Port             string
 	NumberOfShards   int
 	NumberOfReplicas int
-	IndexName        string
+	AliasName        string
 }
 
 type databaseConfig struct {

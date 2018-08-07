@@ -34,7 +34,7 @@ func CreateRecord(record *Record) {
 	esClient := es.ElasticClient()
 	redisClient := db.RedisClient()
 
-	index := config.Config().ElasticSearchConfig.IndexName
+	index := config.Config().ElasticSearchConfig.AliasName
 
 	dataExist, err := redis.Bool(redisClient.Do("EXISTS", recordHash(record)))
 

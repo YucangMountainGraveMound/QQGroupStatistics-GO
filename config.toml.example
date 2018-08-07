@@ -5,7 +5,7 @@ Secret = "some secret key"
   Port = "9200"
   NumberOfShards = 5
   NumberOfReplicas = 1
-  IndexName = "qq"
+  AliasName = "qq"
 
 [DatabaseConfig]
   Host = "localhost"

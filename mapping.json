@@ -1,0 +1,41 @@
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
+  "mappings": {
+    "qq": {
+      "properties": {
+        "number": {
+          "type": "keyword"
+        },
+        "message": {
+          "type": "text",
+          "analyzer": "ik_max_word",
+          "search_analyzer": "ik_max_word",
+          "fielddata": true,
+          "boost": 5,
+          "term_vector": "with_positions_offsets"
+        },
+        "date": {
+          "type": "date"
+        },
+        "images": {
+          "type": "keyword"
+        },
+        "expression": {
+          "type": "keyword"
+        },
+        "at": {
+          "type": "keyword"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "message_len": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

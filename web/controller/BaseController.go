@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/now"
 	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
+	"dormon.net/qq/config"
 )
 
 // CommonParams 提取出共有的请求参数
@@ -60,7 +61,7 @@ func prepare(c *gin.Context) (queryService *elastic.SearchService) {
 	cp = &CommonParams{}
 	cp.extractParams(c)
 
-	queryService = esClient.Search()
+	queryService = esClient.Search().Index(config.Config().ElasticSearchConfig.AliasName)
 	query := elastic.NewBoolQuery()
 
 	// 检索特定账号
