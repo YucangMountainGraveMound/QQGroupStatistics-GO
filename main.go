@@ -30,19 +30,6 @@ func main() {
 		mht.CMDRunImport,
 		mht.CMDRunFix,
 	}
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			EnvVar: "DORMON_QQ_CONFIG",
-			Name:   "config, C",
-			Usage:  "specify the configuration file",
-			Value:  "./config.toml",
-		},
-		cli.BoolFlag{
-			EnvVar: "DORMON_QQ_GENERATE_CONFIG",
-			Name:   "generate, G",
-			Usage:  "generate a configuration file",
-		},
-	}
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -13,7 +13,20 @@ var CMDRunWeb = cli.Command{
 	Name:        "web",
 	Usage:       "run web",
 	Description: "The website of qq statistics",
-	Action:      runWeb,
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			EnvVar: "DORMON_QQ_CONFIG",
+			Name:   "config, C",
+			Usage:  "specify the configuration file",
+			Value:  "./config.toml",
+		},
+		cli.BoolFlag{
+			EnvVar: "DORMON_QQ_GENERATE_CONFIG",
+			Name:   "generate, G",
+			Usage:  "generate a configuration file",
+		},
+	},
+	Action: runWeb,
 }
 
 // RunWeb run to serve a web application

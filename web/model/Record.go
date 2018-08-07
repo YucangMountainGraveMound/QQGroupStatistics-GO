@@ -139,6 +139,7 @@ func getAccount(a string) string {
 	found := false
 	account := ""
 	for _, v := range config.Config().Account {
+		v.Account = strings.Replace(v.Account, "【管理员】", "", -1)
 		if v.Account == a {
 			account = v.Account
 			found = true
@@ -156,7 +157,7 @@ func getAccount(a string) string {
 		}
 	}
 	if !found {
-		logrus.Warnf("Cannot locate qq number in configs: %s", a)
+		logrus.Warnf("Cannot locate qq number in configs: [%s]", a)
 	}
 	return account
 }

@@ -13,9 +13,9 @@
 *.out
 
 .idea
-/玉苍山车神.mht
 /images/*
 /config.toml
 .vscode
 /go.sum
 /tls/
+*.mht

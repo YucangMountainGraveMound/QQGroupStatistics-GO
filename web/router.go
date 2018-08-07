@@ -25,6 +25,9 @@ func InitialRouter() *gin.Engine {
 		api.POST("/login", mv.JWTMiddleware().LoginHandler)
 		api.GET("/histogram/heatmap", controller.Histogram)
 		api.Static("/image/raw", "images")
+
+		api.PUT("/record/message", controller.RecordMessage)
+		api.PUT("/record/pic", controller.RecordPicture)
 	}
 
 	// Require auth
