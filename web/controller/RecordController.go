@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"dormon.net/qq/web/model"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"dormon.net/qq/web/model"
-	"dormon.net/qq/record_process"
 )
 
 func RecordMessage(c *gin.Context) {
@@ -19,8 +18,6 @@ func RecordMessage(c *gin.Context) {
 		return
 	}
 
-	record_process.MsgChan <- msg
-
 }
 
 func RecordPicture(c *gin.Context) {
@@ -34,7 +31,5 @@ func RecordPicture(c *gin.Context) {
 		})
 		return
 	}
-
-	record_process.PicChan <- pic
 
 }

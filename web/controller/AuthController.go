@@ -3,16 +3,16 @@ package controller
 import (
 	"dormon.net/qq/web/model"
 
+	"github.com/appleboy/gin-jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"github.com/appleboy/gin-jwt"
 	"strings"
 )
 
 // Authenticator Jwt验证用户信息
-func Authenticator(username, password string, c *gin.Context) (interface{}, bool) {
+func Authenticator(username, password string, c *gin.Context) (string, bool) {
 	userInfo, err := model.FindUserByAccount(username)
 	if err != nil {
 		return "", false
