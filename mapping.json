@@ -26,6 +26,9 @@
         "expression": {
           "type": "keyword"
         },
+        "message_type": {
+          "type": "keyword"
+        },
         "at": {
           "type": "keyword"
         },

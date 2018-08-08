@@ -88,22 +88,18 @@ func (client *RedisPool) Pop(queueName string) (interface{}, error) {
 	c := client.pool.Get()
 	defer c.Close()
 
-	results := make([]interface{}, int(count))
 	var result interface{}
 
-	for i := 0; i < int(count); i++ {
-		reply, err := c.Do("LPOP", queueName)
-		if err != nil {
-			return nil, err
-		}
-
-		decoder := json.NewDecoder(bytes.NewReader(reply.([]byte)))
-		if err := decoder.Decode(&result); err != nil {
-			return nil, err
-		}
-
-		results = append(results, result)
+	reply, err := c.Do("LPOP", queueName)
+	if err != nil {
+		return nil, err
 	}
+
+	decoder := json.NewDecoder(bytes.NewReader(reply.([]byte)))
+	if err := decoder.Decode(&result); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 

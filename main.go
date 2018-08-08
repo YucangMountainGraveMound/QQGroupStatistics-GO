@@ -6,7 +6,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"dormon.net/qq/mht"
+	rp "dormon.net/qq/record_process"
 	"dormon.net/qq/web"
 
 	"gopkg.in/urfave/cli.v1"
@@ -28,8 +28,8 @@ func main() {
 	app.Version = AppVersion
 	app.Commands = []cli.Command{
 		web.CMDRunWeb,
-		mht.CMDRunImport,
-		mht.CMDRunFix,
+		rp.CMDRunImport,
+		rp.CMDRunFix,
 		es.CMDRunReindex,
 		es.CMDRunCreate,
 	}

@@ -3,27 +3,13 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"github.com/sirupsen/logrus"
+	"dormon.net/qq/web/model"
+	"dormon.net/qq/record_process"
 )
-
-type Message struct {
-	ClassName string `json:"className"`
-	FriendUin string `json:"friendUin"`
-	Message   string `json:"message"`
-	SelfUin   string `json:"selfUin"`
-	SenderUin string `json:"senderUin"`
-	Time      string `json:"time"`
-	UniSeq    string `json:"uniSeq"`
-}
-
-type Picture struct {
-	PicUrl string `json:"picUrl"`
-	UniSeq string `json:"uniSeq"`
-}
 
 func RecordMessage(c *gin.Context) {
 	var err error
-	var msg Message
+	var msg model.Message
 	err = c.BindJSON(&msg)
 	if !handleError(err, c) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -33,13 +19,13 @@ func RecordMessage(c *gin.Context) {
 		return
 	}
 
-	logrus.Info(msg)
+	record_process.MsgChan <- msg
 
 }
 
 func RecordPicture(c *gin.Context) {
 	var err error
-	var pic Picture
+	var pic model.Picture
 	err = c.BindJSON(&pic)
 	if !handleError(err, c) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -49,6 +35,6 @@ func RecordPicture(c *gin.Context) {
 		return
 	}
 
-	logrus.Info(pic)
+	record_process.PicChan <- pic
 
 }

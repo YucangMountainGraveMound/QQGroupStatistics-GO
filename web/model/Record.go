@@ -12,16 +12,33 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/sirupsen/logrus"
-)
+	)
 
 type Record struct {
-	Number     string    `json:"number"`
-	Message    string    `json:"message"`
-	Date       time.Time `json:"date"`
-	Images     []string  `json:"images"`
-	At         string    `json:"at"`
-	Interval   int64     `json:"interval"`
-	MessageLen int       `json:"message_len"`
+	Number      string    `json:"number"`
+	Message     string    `json:"message"`
+	Date        time.Time `json:"date"`
+	Images      []string  `json:"images"`
+	At          string    `json:"at"`
+	Interval    int64     `json:"interval"`
+	MessageLen  int       `json:"message_len"`
+	Expression  string    `json:"expression"`
+	MessageType string    `json:"message_type"`
+}
+
+type Message struct {
+	ClassName string `json:"className"`
+	FriendUin string `json:"friendUin"`
+	Message   string `json:"message"`
+	SelfUin   string `json:"selfUin"`
+	SenderUin string `json:"senderUin"`
+	Time      string `json:"time"`
+	UniSeq    string `json:"uniSeq"`
+}
+
+type Picture struct {
+	PicUrl string `json:"picUrl"`
+	UniSeq string `json:"uniSeq"`
 }
 
 func CreateRecord(record *Record) {
@@ -39,7 +56,7 @@ func CreateRecord(record *Record) {
 	dataExist, err := redis.Bool(redisClient.Do("EXISTS", recordHash(record)))
 
 	if err != nil {
-		logrus.Errorf("Error when creating record %s with error: %s", record, err)
+		logrus.Errorf("Error when creating record_process %s with error: %s", record, err)
 	}
 
 	if !dataExist {
@@ -50,12 +67,12 @@ func CreateRecord(record *Record) {
 
 		_, err = redisClient.Do("SET", recordHash(record), "")
 		if err != nil {
-			logrus.Errorf("Redis Error when doing SET record hash: %s", err)
+			logrus.Errorf("Redis Error when doing SET record_process hash: %s", err)
 		}
 
 		_, err = redisClient.Do("SET", record.Number, record.Date.Unix())
 		if err != nil {
-			logrus.Errorf("Redis Error when doing SET record date: %s", err)
+			logrus.Errorf("Redis Error when doing SET record_process date: %s", err)
 		}
 
 		if err != nil {
@@ -93,7 +110,7 @@ func (record *Record) trim() {
 	redisClient := db.RedisConn()
 	lastRecordUnixTime, err := redis.Int64(redisClient.Do("GET", record.Number))
 	if err != nil {
-		logrus.Errorf("Redis Error when doing GET record date: %s", err)
+		logrus.Errorf("Redis Error when doing GET record_process date: %s", err)
 		lastRecordUnixTime = 0
 	}
 	record.Interval = record.Date.Unix() - lastRecordUnixTime

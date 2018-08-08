@@ -7,6 +7,7 @@ import (
 	"dormon.net/qq/web/model"
 
 	"gopkg.in/urfave/cli.v1"
+	"dormon.net/qq/record_process"
 )
 
 var CMDRunWeb = cli.Command{
@@ -31,6 +32,8 @@ var CMDRunWeb = cli.Command{
 
 // RunWeb run to serve a web application
 func runWeb(c *cli.Context) {
+
+	go record_process.Process()
 
 	config.InitialConfig(c)
 
