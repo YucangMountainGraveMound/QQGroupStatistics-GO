@@ -32,7 +32,7 @@ func CreateRecord(record *Record) {
 	}
 
 	esClient := es.ElasticClient()
-	redisClient := db.RedisClient()
+	redisClient := db.RedisConn()
 
 	index := config.Config().ElasticSearchConfig.AliasName
 
@@ -90,7 +90,7 @@ func (record *Record) trim() {
 	}
 
 	// 计算消息间隔
-	redisClient := db.RedisClient()
+	redisClient := db.RedisConn()
 	lastRecordUnixTime, err := redis.Int64(redisClient.Do("GET", record.Number))
 	if err != nil {
 		logrus.Errorf("Redis Error when doing GET record date: %s", err)

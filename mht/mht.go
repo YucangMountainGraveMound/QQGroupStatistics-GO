@@ -62,7 +62,7 @@ func RunImport(c *cli.Context) {
 	autoMigrate()
 
 	if c.Bool("overwrite") {
-		db.RedisClient().Do("flushall")
+		db.RedisConn().Do("flushall")
 	}
 
 	content, err := ioutil.ReadFile(c.String("record"))
