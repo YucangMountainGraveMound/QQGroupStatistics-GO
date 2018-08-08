@@ -54,6 +54,10 @@ func RedisClient() *RedisPool {
 	return redisPool
 }
 
+func RedisConn() redis.Conn {
+	return RedisClient().pool.Get()
+}
+
 // Enqueue 入队
 func (client *RedisPool) Enqueue(queueName string, item interface{}) error {
 
