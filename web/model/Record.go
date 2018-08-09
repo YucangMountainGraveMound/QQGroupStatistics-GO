@@ -241,6 +241,14 @@ func (record *Record) trim() {
 		record.At = getAccount(record.At)
 	}
 
+	// TODO:目前没有好的处理@xxx之后没有空格的情况
+	if strings.Contains(record.Message, "@") {
+		a := getAccount(strings.Split(strings.Split(record.Message, "@")[1], " ")[0])
+		if a != "" {
+			record.At = a
+		}
+	}
+
 	// 表情处理
 	// TODO: 由于表情占字符长度不定，先循环
 	logrus.Info(record.Message)
@@ -324,6 +332,7 @@ func getAccount(a string) string {
 	}
 	if !found {
 		logrus.Warnf("Cannot locate qq number in configs: [%s]", a)
+		return ""
 	}
 	return account
 }
