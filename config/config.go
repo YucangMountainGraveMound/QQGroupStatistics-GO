@@ -14,6 +14,7 @@ import (
 
 type tomlConfig struct {
 	Secret              string
+	SpecificGroup       string
 	ElasticSearchConfig elasticSearchConfig
 	DatabaseConfig      databaseConfig
 	RedisConfig         redisConfig
@@ -64,7 +65,8 @@ var (
 
 func InitialConfig(c *cli.Context) {
 	var defaultConfig = tomlConfig{
-		Secret: utils.RandomString(32),
+		Secret:        utils.RandomString(32),
+		SpecificGroup: "123456789",
 		ElasticSearchConfig: elasticSearchConfig{
 			"localhost",
 			"9200",

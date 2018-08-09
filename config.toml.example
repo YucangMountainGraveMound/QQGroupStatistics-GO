@@ -1,4 +1,5 @@
 Secret = "some secret key"
+SpecificGroup = "123456789"
 
 [ElasticSearchConfig]
   Host = "localhost"

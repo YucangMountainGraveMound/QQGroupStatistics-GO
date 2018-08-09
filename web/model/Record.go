@@ -77,7 +77,7 @@ func CreateRecordFromXposedMessage(message Message) error {
 			logrus.Errorf("Failed to create document id %s with error: %s", message.UniSeq, err)
 			return err
 		}
-		logrus.Infof("Message doc id %s created", message.UniSeq)
+		logrus.Debugf("Message doc id %s created", message.UniSeq)
 	} else {
 		// 如果存在就获取内容
 		source, err := d.Source.MarshalJSON()
@@ -103,9 +103,9 @@ func CreateRecordFromXposedMessage(message Message) error {
 				logrus.Errorf("Failed to update msg, document id %s with error: %s", message.UniSeq, err)
 				return err
 			}
-			logrus.Infof("Message doc id %s updated", message.UniSeq)
+			logrus.Debugf("Message doc id %s updated", message.UniSeq)
 		} else {
-			logrus.Infof("Document %s already exists, skip.", message.UniSeq)
+			logrus.Debugf("Document %s already exists, skip.", message.UniSeq)
 		}
 	}
 
@@ -150,7 +150,7 @@ func CreateRecordFromXposedPicture(picture Picture) error {
 			for i := 0; i < len(r.Images); i ++ {
 				if r.Images[i] == hash {
 					// 图片已经存在，退出
-					logrus.Infof("Picture hash %s exists", hash)
+					logrus.Debugf("Picture hash %s exists", hash)
 					return nil
 				}
 			}
@@ -160,12 +160,13 @@ func CreateRecordFromXposedPicture(picture Picture) error {
 		imageArr := append(r.Images, hash)
 		_, err = esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(picture.UniSeq).Doc(map[string]interface{}{
 			"images": imageArr,
+			"date":   time.Now(),
 		}).Do(context.Background())
 		if err != nil {
 			logrus.Errorf("Failed to update pic, document id %s with error: %s", picture.UniSeq, err)
 			return err
 		}
-		logrus.Infof("Picture doc id %s updated", picture.UniSeq)
+		logrus.Debugf("Picture doc id %s updated", picture.UniSeq)
 	}
 
 	return nil
@@ -190,9 +191,9 @@ func CreateRecordFromImport(record *Record) {
 		if err != nil {
 			logrus.Errorf("Failed to create document id %s with error: %s", recordHash, err)
 		}
-		logrus.Infof("Record created. Record id: %s", recordHash)
+		logrus.Debugf("Record created. Record id: %s", recordHash)
 	} else {
-		logrus.Infof("Record already exist, skip! Record id: %s", recordHash)
+		logrus.Debugf("Record already exist, skip! Record id: %s", recordHash)
 	}
 }
 
@@ -228,13 +229,6 @@ func (record *Record) trim() {
 
 	// 计算消息间隔
 	// TODO:改为定时任务遍历所有文档来计算
-	//redisClient := db.RedisConn()
-	//lastRecordUnixTime, err := redis.Int64(redisClient.Do("GET", record.Number))
-	//if err != nil {
-	//	logrus.Errorf("Redis Error when doing GET record_process date: %s", err)
-	//	lastRecordUnixTime = 0
-	//}
-	//record.Interval = record.Date.Unix() - lastRecordUnixTime
 
 	// 处理@谁
 	if record.At != "" {
@@ -250,29 +244,28 @@ func (record *Record) trim() {
 	}
 
 	// 表情处理
-	// TODO: 由于表情占字符长度不定，先循环
-	logrus.Info(record.Message)
-
-	bIndex := strings.Index(record.Message, "\x14")
-	if bIndex != -1 {
-		// 存在表情
-		// 表情占长度可能占2-3个字节
-		exp := record.Message[bIndex : bIndex+2]
-		if config.GetExpression()[exp] != "" {
-			record.Expression = config.GetExpression()[exp] + ".png"
-			record.Message = strings.Replace(record.Message, exp, "", -1)
-		} else {
-			if len(record.Message[bIndex:]) >= 3 {
-				exp = record.Message[bIndex : bIndex+3]
+	if len(record.Message) < 2 {
+		bIndex := strings.Index(record.Message, "\x14")
+		if bIndex != -1 {
+			// 存在表情
+			// 表情占长度可能占2-3个字节
+			if len(record.Message[bIndex:]) >= 2 {
+				exp := record.Message[bIndex : bIndex+2]
 				if config.GetExpression()[exp] != "" {
 					record.Expression = config.GetExpression()[exp] + ".png"
 					record.Message = strings.Replace(record.Message, exp, "", -1)
+				} else {
+					if len(record.Message[bIndex:]) >= 3 {
+						exp = record.Message[bIndex : bIndex+3]
+						if config.GetExpression()[exp] != "" {
+							record.Expression = config.GetExpression()[exp] + ".png"
+							record.Message = strings.Replace(record.Message, exp, "", -1)
+						}
+					}
 				}
 			}
 		}
 	}
-
-	logrus.Info(record)
 }
 
 // trimSystemMessage 处理系统消息

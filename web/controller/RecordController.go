@@ -4,6 +4,8 @@ import (
 	"dormon.net/qq/web/model"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"dormon.net/qq/config"
+	"strings"
 )
 
 func RecordMessage(c *gin.Context) {
@@ -18,7 +20,9 @@ func RecordMessage(c *gin.Context) {
 		return
 	}
 
-	model.CreateRecordFromXposedMessage(msg)
+	if msg.FriendUin == config.Config().SpecificGroup {
+		model.CreateRecordFromXposedMessage(msg)
+	}
 
 }
 
@@ -34,5 +38,7 @@ func RecordPicture(c *gin.Context) {
 		return
 	}
 
-	model.CreateRecordFromXposedPicture(pic)
+	if strings.Contains(pic.PicUrl, config.Config().SpecificGroup) {
+		model.CreateRecordFromXposedPicture(pic)
+	}
 }
