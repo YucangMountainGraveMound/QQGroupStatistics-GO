@@ -6,7 +6,6 @@ import (
 	"dormon.net/qq/es"
 	"dormon.net/qq/web/model"
 
-	"dormon.net/qq/record_process"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -34,7 +33,6 @@ var CMDRunWeb = cli.Command{
 func runWeb(c *cli.Context) {
 
 	config.InitialConfig(c)
-
 	es.InitialES()
 
 	db.InitialDB()
@@ -52,5 +50,6 @@ func autoMigrate() {
 		model.User{},
 		model.Image{},
 		model.Dictionary{},
+		model.Expression{},
 	)
 }

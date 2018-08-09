@@ -106,10 +106,10 @@ func ParseHtml(m *MHtml) error {
 
 	date := ""
 	doc.Find("table").Find("tr").Find("td").Each(func(i int, selection *goquery.Selection) {
-
 		if selection.Children().Size() == 0 {
 			date = selection.Text()
 		}
+
 		if selection.Children().Size() == 2 {
 			// 用户账号
 			account := selection.Get(0).FirstChild.FirstChild.FirstChild.Data
@@ -133,21 +133,23 @@ func ParseHtml(m *MHtml) error {
 			})
 
 			// 消息图片内容
-			images := make([]string, 1)
+			images := make([]string, selection.Find("IMG").Length())
+			imageIndex := 0
 			selection.Find("IMG").Each(func(i int, selection *goquery.Selection) {
 				// 由于导出的html img src 中可能存在空格问题
 				image, _ := selection.Attr("src")
 				if image != "" {
 					imageName, _ := model.FindImageByImageHash(image)
-					images = append(images, imageName.ImageName)
+					images[imageIndex] = imageName.ImageName
+					imageIndex ++
 				}
 			})
 
-			model.CreateRecord(&model.Record{
+			model.CreateRecordFromImport(&model.Record{
 				Number:     account,
 				Message:    message,
 				Date:       formattedTime,
-				Images:     images[1:],
+				Images:     images[:],
 				At:         at,
 				MessageLen: strings.Count(message, "") - 1,
 			})

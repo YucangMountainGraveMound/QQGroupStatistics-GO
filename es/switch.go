@@ -9,8 +9,8 @@ import (
 )
 
 var CMDRunSwitchIndex = cli.Command{
-	Name:        "reindex",
-	Usage:       "reindex ES's index for new mapping",
+	Name:        "switch",
+	Usage:       "set alias to a index",
 	Description: "As modifying ES's mapping, reindex the index to apply new changes.",
 	Flags: []cli.Flag{
 		// 指定要切换的新的index的名称
@@ -37,7 +37,6 @@ var CMDRunSwitchIndex = cli.Command{
 
 func runSwitch(c *cli.Context) {
 	config.InitialConfig(c)
-	InitialES()
 
 	indexName := c.String("index")
 

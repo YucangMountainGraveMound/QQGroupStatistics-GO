@@ -47,6 +47,11 @@ type account struct {
 	Alias   []string
 }
 
+type expression struct {
+	Name      string
+	Character string
+}
+
 type tls struct {
 	Pem string
 	Key string

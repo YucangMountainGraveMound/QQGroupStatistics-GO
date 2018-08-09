@@ -12,7 +12,7 @@ import (
 )
 
 // Authenticator Jwt验证用户信息
-func Authenticator(username, password string, c *gin.Context) (string, bool) {
+func Authenticator(username, password string, c *gin.Context) (interface{}, bool) {
 	userInfo, err := model.FindUserByAccount(username)
 	if err != nil {
 		return "", false
@@ -43,7 +43,7 @@ func Me(c *gin.Context) {
 }
 
 type UpdatePasswordReq struct {
-	NewPassword string `json:"new"`
+	NewPassword string `j:"new"`
 }
 
 func UpdatePassword(c *gin.Context) {

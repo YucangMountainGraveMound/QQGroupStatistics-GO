@@ -31,6 +31,7 @@ func main() {
 		rp.CMDRunImport,
 		rp.CMDRunFix,
 		es.CMDRunReindex,
+		es.CMDRunSwitchIndex,
 		es.CMDRunCreate,
 	}
 

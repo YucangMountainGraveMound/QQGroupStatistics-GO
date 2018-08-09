@@ -7,6 +7,7 @@ import (
 	"context"
 	"dormon.net/qq/config"
 	"dormon.net/qq/utils"
+	"strings"
 )
 
 var CMDRunCreate = cli.Command{
@@ -45,9 +46,12 @@ var CMDRunCreate = cli.Command{
 
 func RunCreate(c *cli.Context) {
 	config.InitialConfig(c)
-	InitialES()
 
 	indexName := c.String("index")
+
+	if indexName == "" {
+		indexName = strings.ToLower(utils.RandomString(16))
+	}
 
 	mappingPath := c.String("mapping")
 	if mappingPath == "" {

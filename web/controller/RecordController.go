@@ -18,6 +18,8 @@ func RecordMessage(c *gin.Context) {
 		return
 	}
 
+	model.CreateRecordFromXposedMessage(msg)
+
 }
 
 func RecordPicture(c *gin.Context) {
@@ -32,4 +34,5 @@ func RecordPicture(c *gin.Context) {
 		return
 	}
 
+	model.CreateRecordFromXposedPicture(pic)
 }

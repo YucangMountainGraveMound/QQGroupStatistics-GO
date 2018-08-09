@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"dormon.net/qq/config"
-	"dormon.net/qq/db"
 	"dormon.net/qq/es"
 	"dormon.net/qq/utils"
 
-	"github.com/garyburd/redigo/redis"
 	"github.com/sirupsen/logrus"
-	)
+	"github.com/olivere/elastic"
+	"github.com/araddon/dateparse"
+	"encoding/json"
+	"github.com/jinzhu/gorm"
+)
 
 type Record struct {
 	Number      string    `json:"number"`
@@ -24,6 +26,12 @@ type Record struct {
 	MessageLen  int       `json:"message_len"`
 	Expression  string    `json:"expression"`
 	MessageType string    `json:"message_type"`
+}
+
+type Expression struct {
+	gorm.Model
+	Key   string `gorm:"type:varchar(10);unique_index"`
+	Value string `gorm:"type:varchar(200)"`
 }
 
 type Message struct {
@@ -41,7 +49,129 @@ type Picture struct {
 	UniSeq string `json:"uniSeq"`
 }
 
-func CreateRecord(record *Record) {
+func CreateRecordFromXposedMessage(message Message) error {
+
+	index := config.Config().ElasticSearchConfig.AliasName
+	esClient := es.ElasticClient()
+
+	dateTime, err := dateparse.ParseAny(message.Time)
+	if err != nil {
+		logrus.Errorf("Failed to parse dateTime %s", message.Time)
+		return err
+	}
+
+	record := &Record{
+		Number:      message.SenderUin,
+		Date:        dateTime,
+		Message:     message.Message,
+		MessageLen:  strings.Count(message.Message, ""),
+		MessageType: message.ClassName,
+	}
+
+	d := getDocument(message.UniSeq)
+	if d == nil {
+		// 如果没有记录就直接创建
+		record.trim()
+		_, err := esClient.Index().Index(index).Id(message.UniSeq).Type(index).BodyJson(record).Do(context.Background())
+		if err != nil {
+			logrus.Errorf("Failed to create document id %s with error: %s", message.UniSeq, err)
+			return err
+		}
+		logrus.Infof("Message doc id %s created", message.UniSeq)
+	} else {
+		// 如果存在就获取内容
+		source, err := d.Source.MarshalJSON()
+		if err != nil {
+			logrus.Errorf("Failed to marshal source to json with error: %s", err)
+		}
+		var r Record
+		err = json.Unmarshal(source, &r)
+		if err != nil {
+			logrus.Errorf("Failed to marshal source json with error: %s", err)
+		}
+		// 通过number字段判断message是否已经创建，若为空，表示该记录是由picture创建的
+		if r.Number == "" {
+			record.trim()
+			_, err := esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(message.UniSeq).Doc(map[string]interface{}{
+				"number":       record.Number,
+				"date":         record.Date,
+				"message":      record.Message,
+				"message_len":  record.MessageLen,
+				"message_type": record.MessageType,
+			}).Do(context.Background())
+			if err != nil {
+				logrus.Errorf("Failed to update msg, document id %s with error: %s", message.UniSeq, err)
+				return err
+			}
+			logrus.Infof("Message doc id %s updated", message.UniSeq)
+		} else {
+			logrus.Infof("Document %s already exists, skip.", message.UniSeq)
+		}
+	}
+
+	return nil
+}
+
+func CreateRecordFromXposedPicture(picture Picture) error {
+	index := config.Config().ElasticSearchConfig.AliasName
+	esClient := es.ElasticClient()
+
+	d := getDocument(picture.UniSeq)
+
+	hash, err := utils.DownloadImageToBase64(picture.PicUrl)
+	if err != nil {
+		logrus.Errorf("Failed to download pic %s with error: %s", picture.PicUrl, err)
+	}
+
+	if d == nil {
+		// 没有记录的情况
+		record := &Record{
+			Images: []string{hash},
+		}
+		_, err := esClient.Index().Index(index).Id(picture.UniSeq).Type(index).BodyJson(record).Do(context.Background())
+		if err != nil {
+			logrus.Errorf("Failed to create document id %s with error: %s", picture.UniSeq, err)
+			return err
+		}
+		logrus.Infof("Picture doc id %s created", picture.UniSeq)
+	} else {
+		// 有记录的情况先获取doc
+		source, err := d.Source.MarshalJSON()
+		if err != nil {
+			logrus.Errorf("Failed to marshal source to json with error: %s", err)
+		}
+		var r Record
+		err = json.Unmarshal(source, &r)
+		if err != nil {
+			logrus.Errorf("Failed to marshal source json with error: %s", err)
+		}
+		if len(r.Images) != 0 {
+			// 检查图片是否已经存在
+			for i := 0; i < len(r.Images); i ++ {
+				if r.Images[i] == hash {
+					// 图片已经存在，退出
+					logrus.Infof("Picture hash %s exists", hash)
+					return nil
+				}
+			}
+		}
+
+		// 不存在则更新
+		imageArr := append(r.Images, hash)
+		_, err = esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(picture.UniSeq).Doc(map[string]interface{}{
+			"images": imageArr,
+		}).Do(context.Background())
+		if err != nil {
+			logrus.Errorf("Failed to update pic, document id %s with error: %s", picture.UniSeq, err)
+			return err
+		}
+		logrus.Infof("Picture doc id %s updated", picture.UniSeq)
+	}
+
+	return nil
+}
+
+func CreateRecordFromImport(record *Record) {
 
 	if record.trim(); record.Number == "" {
 		// config中若不存在对应的qq号码或者昵称，则跳过
@@ -49,41 +179,24 @@ func CreateRecord(record *Record) {
 	}
 
 	esClient := es.ElasticClient()
-	redisClient := db.RedisConn()
 
 	index := config.Config().ElasticSearchConfig.AliasName
+	recordHash := recordHash(record)
 
-	dataExist, err := redis.Bool(redisClient.Do("EXISTS", recordHash(record)))
+	d := getDocument(recordHash)
 
-	if err != nil {
-		logrus.Errorf("Error when creating record_process %s with error: %s", record, err)
-	}
-
-	if !dataExist {
-		_, err := esClient.Index().Index(index).Type(index).BodyJson(record).Do(context.Background())
+	if d == nil {
+		_, err := esClient.Index().Index(index).Id(recordHash).Type(index).BodyJson(record).Do(context.Background())
 		if err != nil {
-			logrus.Errorf("Error when Indexing %s with error: %s", index, err)
+			logrus.Errorf("Failed to create document id %s with error: %s", recordHash, err)
 		}
-
-		_, err = redisClient.Do("SET", recordHash(record), "")
-		if err != nil {
-			logrus.Errorf("Redis Error when doing SET record_process hash: %s", err)
-		}
-
-		_, err = redisClient.Do("SET", record.Number, record.Date.Unix())
-		if err != nil {
-			logrus.Errorf("Redis Error when doing SET record_process date: %s", err)
-		}
-
-		if err != nil {
-			panic(err)
-		}
-		logrus.Infof("Record created. Record time: %s", record.Date)
+		logrus.Infof("Record created. Record id: %s", recordHash)
 	} else {
-		logrus.Infof("Record already exist, skip! Record time: %s", record.Date)
+		logrus.Infof("Record already exist, skip! Record id: %s", recordHash)
 	}
 }
 
+// 消息内容处理
 func (record *Record) trim() {
 	// 账号处理
 	record.Number = getAccount(record.Number)
@@ -93,8 +206,15 @@ func (record *Record) trim() {
 	if record.MessageLen == 0 {
 		record.Message = ""
 	}
+
+	// 图片消息处理
+	record.Message = strings.Replace(record.Message, "[图片]", "", -1)
+
 	// 空格处理
 	record.Message = strings.Replace(record.Message, "\u00a0", " ", -1)
+
+	// 计算消息长度
+	record.MessageLen = strings.Count(record.Message, "")
 
 	// 系统消息处理
 	if record.Number == "10000" {
@@ -107,20 +227,47 @@ func (record *Record) trim() {
 	}
 
 	// 计算消息间隔
-	redisClient := db.RedisConn()
-	lastRecordUnixTime, err := redis.Int64(redisClient.Do("GET", record.Number))
-	if err != nil {
-		logrus.Errorf("Redis Error when doing GET record_process date: %s", err)
-		lastRecordUnixTime = 0
-	}
-	record.Interval = record.Date.Unix() - lastRecordUnixTime
+	// TODO:改为定时任务遍历所有文档来计算
+	//redisClient := db.RedisConn()
+	//lastRecordUnixTime, err := redis.Int64(redisClient.Do("GET", record.Number))
+	//if err != nil {
+	//	logrus.Errorf("Redis Error when doing GET record_process date: %s", err)
+	//	lastRecordUnixTime = 0
+	//}
+	//record.Interval = record.Date.Unix() - lastRecordUnixTime
 
 	// 处理@谁
 	if record.At != "" {
 		record.At = getAccount(record.At)
 	}
+
+	// 表情处理
+	// TODO: 由于表情占字符长度不定，先循环
+	logrus.Info(record.Message)
+
+	bIndex := strings.Index(record.Message, "\x14")
+	if bIndex != -1 {
+		// 存在表情
+		// 表情占长度可能占2-3个字节
+		exp := record.Message[bIndex : bIndex+2]
+		if config.GetExpression()[exp] != "" {
+			record.Expression = config.GetExpression()[exp] + ".png"
+			record.Message = strings.Replace(record.Message, exp, "", -1)
+		} else {
+			if len(record.Message[bIndex:]) >= 3 {
+				exp = record.Message[bIndex : bIndex+3]
+				if config.GetExpression()[exp] != "" {
+					record.Expression = config.GetExpression()[exp] + ".png"
+					record.Message = strings.Replace(record.Message, exp, "", -1)
+				}
+			}
+		}
+	}
+
+	logrus.Info(record)
 }
 
+// trimSystemMessage 处理系统消息
 func trimSystemMessage(message, operator string) string {
 
 	// 这里需要判断你、您的对象是谁，即是谁上传的
@@ -148,10 +295,12 @@ func trimSystemMessage(message, operator string) string {
 	return ""
 }
 
+// recordHash 计算消息的hash
 func recordHash(record *Record) string {
 	return utils.MD5(record.Number + record.Date.String() + record.Message)
 }
 
+// getAccount 通过昵称查找发送消息的账号
 func getAccount(a string) string {
 	found := false
 	account := ""
@@ -177,4 +326,24 @@ func getAccount(a string) string {
 		logrus.Warnf("Cannot locate qq number in configs: [%s]", a)
 	}
 	return account
+}
+
+// getDocument 检查某个消息是否已经存在
+func getDocument(id string) *elastic.GetResult {
+	esClient := es.ElasticClient()
+	res, err := esClient.Get().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(id).Do(context.TODO())
+	if err != nil {
+		return nil
+	}
+	return res
+}
+
+func getDocumentField(id, field string) *elastic.GetResult {
+	esClient := es.ElasticClient()
+	fsc := elastic.NewFetchSourceContext(true).Exclude(field)
+	res, err := esClient.Get().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(id).FetchSourceContext(fsc).Do(context.TODO())
+	if err != nil {
+		return nil
+	}
+	return res
 }

@@ -20,3 +20,4 @@
 /tls/
 *.mht
 /Gopkg.lock
+/records/
