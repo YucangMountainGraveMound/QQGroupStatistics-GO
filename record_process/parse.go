@@ -16,6 +16,7 @@ import (
 	"dormon.net/qq/web/model"
 
 	"github.com/PuerkitoBio/goquery"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 var _ = ioutil.ReadAll
@@ -104,6 +105,10 @@ func ParseHtml(m *MHtml) error {
 		panic(err)
 	}
 
+	total := doc.Find("table").Find("tr").Find("td").Length()
+
+	bar := pb.StartNew(int(total))
+
 	date := ""
 	doc.Find("table").Find("tr").Find("td").Each(func(i int, selection *goquery.Selection) {
 		if selection.Children().Size() == 0 {
@@ -153,9 +158,12 @@ func ParseHtml(m *MHtml) error {
 				At:         at,
 				MessageLen: strings.Count(message, "") - 1,
 			})
+
 		}
+		bar.Increment()
 	})
 
+	bar.FinishPrint("Done")
 	return nil
 }
 

@@ -29,8 +29,7 @@ import (
 	}
 }
 */
-// TODO: 分词数量是否有优雅点的实现方法
-// TODO: 没搞明白英文分词数，还得研究一波
+// TODO: 分词数量是否有优雅点的实现方法，没搞明白英文分词数，还得研究一波
 func WordFrequency(c *gin.Context) {
 	queryService := prepare(c)
 

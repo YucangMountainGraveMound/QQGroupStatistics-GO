@@ -8,8 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"strings"
-)
+	)
 
 // Authenticator Jwt验证用户信息
 func Authenticator(username, password string, c *gin.Context) (interface{}, bool) {
@@ -63,15 +62,6 @@ func UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"dormon":  "",
 			"message": "params [new] is required",
-		})
-		return
-	}
-
-	// TODO:实际上传过来的是MD5，长度不会小于8
-	if strings.Count(newPwd.NewPassword, "") < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"dormon":  "",
-			"message": "new password is toooooooooo short",
 		})
 		return
 	}

@@ -16,7 +16,7 @@ func FormatDateTime(date, time string) time.Time {
 	if strings.Contains(time, "下午") {
 		time = string([]rune(time)[2:]) + " pm"
 	}
-	d, err := dateparse.ParseLocal(date + " " + time)
+	d, err := dateparse.ParseAny(date + " " + time)
 	if err != nil {
 		panic(err)
 	}

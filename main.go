@@ -33,6 +33,7 @@ func main() {
 		es.CMDRunReindex,
 		es.CMDRunSwitchIndex,
 		es.CMDRunCreate,
+		es.CMDRunTrim,
 	}
 
 	if err := app.Run(os.Args); err != nil {

@@ -9,7 +9,7 @@ import (
 type Dictionary struct {
 	gorm.Model
 	Key   string `gorm:"type:varchar(100);unique_index"`
-	Value string `gorm:"type:text"` // TODO:使用postgres原生的数组存取
+	Value string `gorm:"type:text"`
 }
 
 func (dict *Dictionary) FirstOrCreate() (err error) {

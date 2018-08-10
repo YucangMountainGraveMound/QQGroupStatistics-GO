@@ -8,11 +8,13 @@ import (
 
 	"github.com/olivere/elastic"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 var once sync.Once
 var elasticClient *elastic.Client
 var esIndex string
+var p *elastic.BulkProcessor
 
 func ElasticClient() *elastic.Client {
 	var err error
@@ -59,4 +61,30 @@ func InitialES() error {
 	}
 
 	return nil
+}
+
+func GetBulkProcess() (*elastic.BulkProcessor) {
+	var err error
+	esClient := ElasticClient()
+	if p == nil {
+		p, err = esClient.
+			BulkProcessor().
+			Name("BULK_PROCESS").
+			Workers(4).
+			BulkActions(1000).
+			FlushInterval(10 * time.Second).
+			Before(func(executionId int64, requests []elastic.BulkableRequest) {
+				for v := range requests {
+					logrus.Info(v)
+				}
+			}).
+			After(func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+				logrus.Errorf("Some error happened in the bulk process: %s", err.Error())
+			}).Do(context.Background())
+		if err != nil {
+			logrus.Fatalf("Failed to create bulk process with error: %s", err)
+			return nil
+		}
+	}
+	return p
 }

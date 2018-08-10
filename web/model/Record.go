@@ -11,9 +11,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/olivere/elastic"
-	"github.com/araddon/dateparse"
 	"encoding/json"
 	"github.com/jinzhu/gorm"
+	"strconv"
+	"github.com/araddon/dateparse"
 )
 
 type Record struct {
@@ -24,7 +25,7 @@ type Record struct {
 	At          string    `json:"at"`
 	Interval    int64     `json:"interval"`
 	MessageLen  int       `json:"message_len"`
-	Expression  string    `json:"expression"`
+	Expression  []string  `json:"expression"`
 	MessageType string    `json:"message_type"`
 }
 
@@ -54,7 +55,8 @@ func CreateRecordFromXposedMessage(message Message) error {
 	index := config.Config().ElasticSearchConfig.AliasName
 	esClient := es.ElasticClient()
 
-	dateTime, err := dateparse.ParseAny(message.Time)
+	dateTime, err := dateparse.ParseIn(message.Time, time.UTC)
+	dateTime = dateTime.Add(8 * time.Hour)
 	if err != nil {
 		logrus.Errorf("Failed to parse dateTime %s", message.Time)
 		return err
@@ -92,7 +94,17 @@ func CreateRecordFromXposedMessage(message Message) error {
 		// 通过number字段判断message是否已经创建，若为空，表示该记录是由picture创建的
 		if r.Number == "" {
 			record.trim()
-			_, err := esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(message.UniSeq).Doc(map[string]interface{}{
+			//request := elastic.NewBulkUpdateRequest().Index(index).Type(index).Id(message.UniSeq).
+			//	Doc(map[string]interface{}{
+			//		"number":       record.Number,
+			//		"date":         record.Date,
+			//		"message":      record.Message,
+			//		"message_len":  record.MessageLen,
+			//		"message_type": record.MessageType,
+			//	})
+			//es.GetBulkProcess(es.MessageProcess).Add(request)
+			_, err := esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).
+				Type(config.Config().ElasticSearchConfig.AliasName).Id(message.UniSeq).Doc(map[string]interface{}{
 				"number":       record.Number,
 				"date":         record.Date,
 				"message":      record.Message,
@@ -123,11 +135,17 @@ func CreateRecordFromXposedPicture(picture Picture) error {
 		logrus.Errorf("Failed to download pic %s with error: %s", picture.PicUrl, err)
 	}
 
+	dateTime, _ := dateparse.ParseIn(strconv.FormatInt(time.Now().Unix(), 10), time.UTC)
+	dateTime = dateTime.Add(8 * time.Hour)
+	logrus.Info(dateTime)
 	if d == nil {
 		// 没有记录的情况
 		record := &Record{
 			Images: []string{hash},
+			Date:   dateTime,
 		}
+		//request := elastic.NewBulkIndexRequest().Index(index).Type(index).Id(picture.UniSeq).Doc(record)
+		//es.GetBulkProcess(es.MessageProcess).Add(request)
 		_, err := esClient.Index().Index(index).Id(picture.UniSeq).Type(index).BodyJson(record).Do(context.Background())
 		if err != nil {
 			logrus.Errorf("Failed to create document id %s with error: %s", picture.UniSeq, err)
@@ -158,9 +176,15 @@ func CreateRecordFromXposedPicture(picture Picture) error {
 
 		// 不存在则更新
 		imageArr := append(r.Images, hash)
-		_, err = esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).Type(config.Config().ElasticSearchConfig.AliasName).Id(picture.UniSeq).Doc(map[string]interface{}{
+		//request := elastic.NewBulkUpdateRequest().Index(index).Type(index).Id(picture.UniSeq).Doc(map[string]interface{}{
+		//	"images": imageArr,
+		//	"date":   dateTime,
+		//})
+		//es.GetBulkProcess(es.MessageProcess).Add(request)
+		_, err = esClient.Update().Index(index).
+			Type(index).Id(picture.UniSeq).Doc(map[string]interface{}{
 			"images": imageArr,
-			"date":   time.Now(),
+			"date":   dateTime,
 		}).Do(context.Background())
 		if err != nil {
 			logrus.Errorf("Failed to update pic, document id %s with error: %s", picture.UniSeq, err)
@@ -222,20 +246,15 @@ func (record *Record) trim() {
 		record.Message = trimSystemMessage(record.Message, "422680319")
 	}
 
-	// 消息存在不正确的时间
-	if record.Date.After(time.Now()) {
-		record.Number = ""
-	}
-
 	// 计算消息间隔
-	// TODO:改为定时任务遍历所有文档来计算
+	// 改为定时任务遍历所有文档来计算
 
 	// 处理@谁
 	if record.At != "" {
 		record.At = getAccount(record.At)
 	}
 
-	// TODO:目前没有好的处理@xxx之后没有空格的情况
+	// TODO:目前没找到好的处理@xxx之后没有空格的情况的方法
 	if strings.Contains(record.Message, "@") {
 		a := getAccount(strings.Split(strings.Split(record.Message, "@")[1], " ")[0])
 		if a != "" {
@@ -244,7 +263,7 @@ func (record *Record) trim() {
 	}
 
 	// 表情处理
-	if len(record.Message) < 2 {
+	if len(record.Message) >= 2 {
 		bIndex := strings.Index(record.Message, "\x14")
 		if bIndex != -1 {
 			// 存在表情
@@ -252,13 +271,13 @@ func (record *Record) trim() {
 			if len(record.Message[bIndex:]) >= 2 {
 				exp := record.Message[bIndex : bIndex+2]
 				if config.GetExpression()[exp] != "" {
-					record.Expression = config.GetExpression()[exp] + ".png"
+					record.Expression = append(record.Expression, config.GetExpression()[exp]+".png")
 					record.Message = strings.Replace(record.Message, exp, "", -1)
 				} else {
 					if len(record.Message[bIndex:]) >= 3 {
 						exp = record.Message[bIndex : bIndex+3]
 						if config.GetExpression()[exp] != "" {
-							record.Expression = config.GetExpression()[exp] + ".png"
+							record.Expression = append(record.Expression, config.GetExpression()[exp]+".png")
 							record.Message = strings.Replace(record.Message, exp, "", -1)
 						}
 					}
