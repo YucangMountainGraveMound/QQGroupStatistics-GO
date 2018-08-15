@@ -111,6 +111,8 @@ func TrimESDate(c *cli.Context) error {
 				record.Images = newImages
 			}
 
+			// 过滤相同的图片
+
 			// 处理interval
 			if temp[record.Number].IsZero() {
 				record.Interval = -1
@@ -320,6 +322,24 @@ func findExpFromLocalImages(image string) string {
 		break
 	case "0165d891141a57894452b316d0e3b601.gif":
 		exp = "41.png"
+		break
+	case "5abed65813bf144cb3da56530351b723.gif":
+		exp = "73.gif"
+		break
+	case "2840010e2931d40e7ac30598a37a3b65.gif":
+		exp = "74.gif"
+		break
+	case "2b8edefe39e8aac996a9856ab469ca35.gif":
+		exp = "75.gif"
+		break
+	case "57e0afd92d103ac8c0558445ad399cd9.gif":
+		exp = "37.png"
+		break
+	case "2e7414bceada27f5ff863c098f3d929f.gif":
+		exp = "76.gif"
+		break
+	case "76e74768c81ed0e143dce29037ab438b.png":
+		exp = "77.png"
 		break
 	}
 	return exp

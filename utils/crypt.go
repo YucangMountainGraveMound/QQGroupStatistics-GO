@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"math/rand"
 	"time"
+	"crypto/hmac"
+	"crypto/sha1"
 )
 
 // MD5 string->md5
@@ -24,4 +26,12 @@ func RandomString(length int) string {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	return string(result)
+}
+
+// HMAC string->hmac
+func HMAC(raw []byte, keyString string) string {
+	key := []byte(keyString)
+	mac := hmac.New(sha1.New, key)
+	mac.Write(raw)
+	return hex.EncodeToString(mac.Sum(nil))
 }

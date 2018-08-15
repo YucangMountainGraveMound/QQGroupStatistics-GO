@@ -79,3 +79,30 @@ func DownloadImageToBase64(imageUrl string) (string, error) {
 	}
 	return name, nil
 }
+
+func DownloadImage(fileName, url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		logrus.Errorf("Failed to download file with status code of %d", resp.StatusCode)
+		return errors.New("error get")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	out, err := os.Create("./images/" + fileName)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(out, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	return nil
+}

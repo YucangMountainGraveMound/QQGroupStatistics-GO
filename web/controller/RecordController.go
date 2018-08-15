@@ -4,41 +4,32 @@ import (
 	"dormon.net/qq/web/model"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"dormon.net/qq/utils"
+	"io/ioutil"
+	"github.com/sirupsen/logrus"
+	"encoding/json"
 	"dormon.net/qq/config"
-	"strings"
+	"strconv"
 )
 
-func RecordMessage(c *gin.Context) {
-	var err error
-	var msg model.Message
-	err = c.BindJSON(&msg)
-	if !handleError(err, c) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"dormon":  "",
-			"message": "Json content may not right",
-		})
+func CoolQ(c *gin.Context) {
+	hmac := c.Request.Header["X-Signature"][0][5:]
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	if utils.HMAC(body, config.Config().CoolQSecret) != hmac {
+		c.String(http.StatusBadRequest, "Invalid token.")
 		return
 	}
 
-	if msg.FriendUin == config.Config().SpecificGroup {
-		model.CreateRecordFromXposedMessage(msg)
+	var record model.CoolQRecord
+
+	logrus.Infoln(string(body))
+	err := json.Unmarshal(body, &record)
+
+	if err != nil {
+		logrus.Error(err)
 	}
 
-}
-
-func RecordPicture(c *gin.Context) {
-	var err error
-	var pic model.Picture
-	err = c.BindJSON(&pic)
-	if !handleError(err, c) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"dormon":  "",
-			"message": "Json content may not right",
-		})
-		return
-	}
-
-	if strings.Contains(pic.PicUrl, config.Config().SpecificGroup) {
-		model.CreateRecordFromXposedPicture(pic)
+	if strconv.Itoa(record.GroupId) == config.Config().SpecificGroup {
+		model.CreateRecordFromCoolQMessage(record)
 	}
 }

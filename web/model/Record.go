@@ -11,10 +11,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/olivere/elastic"
-	"encoding/json"
-	"github.com/jinzhu/gorm"
-	"strconv"
 	"github.com/araddon/dateparse"
+	"strconv"
+	"encoding/json"
+	"dormon.net/qq/db"
+	"github.com/garyburd/redigo/redis"
 )
 
 type Record struct {
@@ -29,168 +30,110 @@ type Record struct {
 	MessageType string    `json:"message_type"`
 }
 
-type Expression struct {
-	gorm.Model
-	Key   string `gorm:"type:varchar(10);unique_index"`
-	Value string `gorm:"type:varchar(200)"`
+type CoolQRecord struct {
+	Anonymous   CoolQAnonymous `json:"anonymous"`
+	Font        int            `json:"font"`
+	GroupId     int            `json:"group_id"`
+	Message     []CoolQMessage `json:"message"`
+	MessageId   int            `json:"message_id"`
+	MessageType string         `json:"message_type"`
+	PostType    string         `json:"post_type"`
+	RawMessage  string         `json:"raw_message"`
+	SelfId      int            `json:"self_id"`
+	SubType     string         `json:"sub_type"`
+	Time        int            `json:"time"`
+	UserId      int            `json:"user_id"`
 }
 
-type Message struct {
-	ClassName string `json:"className"`
-	FriendUin string `json:"friendUin"`
-	Message   string `json:"message"`
-	SelfUin   string `json:"selfUin"`
-	SenderUin string `json:"senderUin"`
-	Time      string `json:"time"`
-	UniSeq    string `json:"uniSeq"`
+type CoolQMessage struct {
+	Data        CoolQMessageItem `json:"data"`
+	MessageType string           `json:"type"`
 }
 
-type Picture struct {
-	PicUrl string `json:"picUrl"`
-	UniSeq string `json:"uniSeq"`
+type CoolQMessageItem struct {
+	Text string `json:"text"`
+	File string `json:"file"`
+	Url  string `json:"url"`
+	Id   string `json:"id"`
+	QQ   string `json:"qq"`
 }
 
-func CreateRecordFromXposedMessage(message Message) error {
+type CoolQAnonymous struct {
+	Flag string `json:"flag"`
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func CreateRecordFromCoolQMessage(CQrecord CoolQRecord) error {
 
 	index := config.Config().ElasticSearchConfig.AliasName
 	esClient := es.ElasticClient()
 
-	dateTime, err := dateparse.ParseIn(message.Time, time.UTC)
+	dateTime, err := dateparse.ParseIn(strconv.Itoa(CQrecord.Time), time.UTC)
 	dateTime = dateTime.Add(8 * time.Hour)
 	if err != nil {
-		logrus.Errorf("Failed to parse dateTime %s", message.Time)
+		logrus.Errorf("Failed to parse dateTime %s", CQrecord.Time)
 		return err
 	}
 
 	record := &Record{
-		Number:      message.SenderUin,
-		Date:        dateTime,
-		Message:     message.Message,
-		MessageLen:  strings.Count(message.Message, ""),
-		MessageType: message.ClassName,
+		Number: strconv.Itoa(CQrecord.UserId),
+		Date:   dateTime,
 	}
 
-	d := getDocument(message.UniSeq)
-	if d == nil {
-		// 如果没有记录就直接创建
-		record.trim()
-		_, err := esClient.Index().Index(index).Id(message.UniSeq).Type(index).BodyJson(record).Do(context.Background())
-		if err != nil {
-			logrus.Errorf("Failed to create document id %s with error: %s", message.UniSeq, err)
-			return err
+	for _, v := range CQrecord.Message {
+		if v.MessageType == "text" {
+			record.Message += v.Data.Text
 		}
-		logrus.Debugf("Message doc id %s created", message.UniSeq)
-	} else {
-		// 如果存在就获取内容
-		source, err := d.Source.MarshalJSON()
-		if err != nil {
-			logrus.Errorf("Failed to marshal source to json with error: %s", err)
+		if v.MessageType == "image" {
+			record.Images = append(record.Images, v.Data.File)
+			go utils.DownloadImage(v.Data.File, v.Data.Url)
 		}
-		var r Record
-		err = json.Unmarshal(source, &r)
-		if err != nil {
-			logrus.Errorf("Failed to marshal source json with error: %s", err)
+		if v.MessageType == "record" {
+			//TODO:音频文件处理
 		}
-		// 通过number字段判断message是否已经创建，若为空，表示该记录是由picture创建的
-		if r.Number == "" {
-			record.trim()
-			//request := elastic.NewBulkUpdateRequest().Index(index).Type(index).Id(message.UniSeq).
-			//	Doc(map[string]interface{}{
-			//		"number":       record.Number,
-			//		"date":         record.Date,
-			//		"message":      record.Message,
-			//		"message_len":  record.MessageLen,
-			//		"message_type": record.MessageType,
-			//	})
-			//es.GetBulkProcess(es.MessageProcess).Add(request)
-			_, err := esClient.Update().Index(config.Config().ElasticSearchConfig.AliasName).
-				Type(config.Config().ElasticSearchConfig.AliasName).Id(message.UniSeq).Doc(map[string]interface{}{
-				"number":       record.Number,
-				"date":         record.Date,
-				"message":      record.Message,
-				"message_len":  record.MessageLen,
-				"message_type": record.MessageType,
-			}).Do(context.Background())
-			if err != nil {
-				logrus.Errorf("Failed to update msg, document id %s with error: %s", message.UniSeq, err)
-				return err
-			}
-			logrus.Debugf("Message doc id %s updated", message.UniSeq)
+		if v.MessageType == "bface" {
+			//TODO:原创表情处理
+		}
+		if v.MessageType == "at" {
+			record.At = v.Data.QQ
+		}
+		if v.MessageType == "face" {
+			record.Expression = append(record.Expression, v.Data.Id+".png")
+		}
+	}
+
+	record.MessageLen = strings.Count(record.Message, "")
+
+	lastRecordTime, err := redis.Int64(db.RedisConn().Do("GET", "lastRecord_"+record.Number))
+	if err == redis.ErrNil {
+		lastRecordTime = 0
+	} else if err != nil {
+		logrus.Errorf("Error get lastRecordTime from redis with error: %s", err)
+	}
+
+	if lastRecordTime == 0 {
+		if getLastRecordTime(record.Number) == 0 {
+			lastRecordTime = record.Date.Unix()
+			record.Interval = -1
 		} else {
-			logrus.Debugf("Document %s already exists, skip.", message.UniSeq)
+			lastRecordTime = getLastRecordTime(record.Number)
+			record.Interval = record.Date.Unix() - lastRecordTime
 		}
-	}
-
-	return nil
-}
-
-func CreateRecordFromXposedPicture(picture Picture) error {
-	index := config.Config().ElasticSearchConfig.AliasName
-	esClient := es.ElasticClient()
-
-	d := getDocument(picture.UniSeq)
-
-	hash, err := utils.DownloadImageToBase64(picture.PicUrl)
-	if err != nil {
-		logrus.Errorf("Failed to download pic %s with error: %s", picture.PicUrl, err)
-	}
-
-	dateTime, _ := dateparse.ParseIn(strconv.FormatInt(time.Now().Unix(), 10), time.UTC)
-	dateTime = dateTime.Add(8 * time.Hour)
-	logrus.Info(dateTime)
-	if d == nil {
-		// 没有记录的情况
-		record := &Record{
-			Images: []string{hash},
-			Date:   dateTime,
-		}
-		//request := elastic.NewBulkIndexRequest().Index(index).Type(index).Id(picture.UniSeq).Doc(record)
-		//es.GetBulkProcess(es.MessageProcess).Add(request)
-		_, err := esClient.Index().Index(index).Id(picture.UniSeq).Type(index).BodyJson(record).Do(context.Background())
-		if err != nil {
-			logrus.Errorf("Failed to create document id %s with error: %s", picture.UniSeq, err)
-			return err
-		}
-		logrus.Infof("Picture doc id %s created", picture.UniSeq)
 	} else {
-		// 有记录的情况先获取doc
-		source, err := d.Source.MarshalJSON()
-		if err != nil {
-			logrus.Errorf("Failed to marshal source to json with error: %s", err)
-		}
-		var r Record
-		err = json.Unmarshal(source, &r)
-		if err != nil {
-			logrus.Errorf("Failed to marshal source json with error: %s", err)
-		}
-		if len(r.Images) != 0 {
-			// 检查图片是否已经存在
-			for i := 0; i < len(r.Images); i ++ {
-				if r.Images[i] == hash {
-					// 图片已经存在，退出
-					logrus.Debugf("Picture hash %s exists", hash)
-					return nil
-				}
-			}
-		}
+		lastRecordTime = getLastRecordTime(record.Number)
+		record.Interval = record.Date.Unix() - lastRecordTime
+	}
 
-		// 不存在则更新
-		imageArr := append(r.Images, hash)
-		//request := elastic.NewBulkUpdateRequest().Index(index).Type(index).Id(picture.UniSeq).Doc(map[string]interface{}{
-		//	"images": imageArr,
-		//	"date":   dateTime,
-		//})
-		//es.GetBulkProcess(es.MessageProcess).Add(request)
-		_, err = esClient.Update().Index(index).
-			Type(index).Id(picture.UniSeq).Doc(map[string]interface{}{
-			"images": imageArr,
-			"date":   dateTime,
-		}).Do(context.Background())
-		if err != nil {
-			logrus.Errorf("Failed to update pic, document id %s with error: %s", picture.UniSeq, err)
-			return err
-		}
-		logrus.Debugf("Picture doc id %s updated", picture.UniSeq)
+	_, err = db.RedisConn().Do("SET", "lastRecord_"+record.Number, record.Date.Unix())
+	if err != nil {
+		logrus.Errorf("Error set lastRecordTime from redis with error: %s", err)
+	}
+
+	_, err = esClient.Index().Index(index).Type(index).BodyJson(record).Do(context.Background())
+	if err != nil {
+		logrus.Errorf("Failed to create document id %s with error: %s", record, err)
+		return err
 	}
 
 	return nil
@@ -367,4 +310,40 @@ func getDocumentField(id, field string) *elastic.GetResult {
 		return nil
 	}
 	return res
+}
+
+/**
+{
+  "size": 1,
+  "query": {
+    "term": {
+      "number": "422680319"
+    }
+  },
+  "sort": {
+    "date": {
+      "order": "desc"
+    }
+  }
+}
+ */
+func getLastRecordTime(number string) int64 {
+	esClient := es.ElasticClient()
+	query := elastic.NewTermQuery("number", number)
+	result, err := esClient.Search().Index(config.Config().ElasticSearchConfig.AliasName).Query(query).Sort("date", false).Size(1).Do(context.Background())
+	if err != nil {
+		return 0
+	}
+
+	if len(result.Hits.Hits) == 0 {
+		return 0
+	}
+
+	var record Record
+	err = json.Unmarshal(*result.Hits.Hits[0].Source, &record)
+	if err != nil {
+		return 0
+	}
+
+	return record.Date.Unix()
 }
